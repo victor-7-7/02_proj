@@ -1,0 +1,10 @@
+{
+    "files.autoSave": "afterDelay",
+    "editor.fontSize": 18,
+    "terminal.integrated.fontSize": 18,
+    "debug.console.fontSize": 18,
+    "markdown.preview.fontSize": 16,
+    "scm.inputFontSize": 14,
+    "workbench.tree.indent": 12,
+    "workbench.editor.enablePreview": false
+}
