@@ -2,6 +2,18 @@ version: '3'
 
 # Вариант сборки для разработки
 services:
+  frontend: 
+    command: npm run start
+    # Есть баг - интерактивная консоль реакта, запущенного в докер-контейнере, 
+    # не работает из коробки. Чтобы пофиксить это, добавим следующие 2 настройки
+    stdin_open: true
+    tty: true
+
+    volumes:
+      # Создаем инлайн-симлинк (без имени) для папки проекта ./frontend/src 
+      # на машине разработчика, ссылающийся на путь в контейнере /usr/src/app/src
+      - ./frontend/src:/usr/src/app/src
+
   api:
     command: npm run dev
     volumes:

@@ -2,6 +2,20 @@ version: '3'
 
 # Вариант сборки для продакшена
 services:
+  frontend:
+    build: ./frontend
+    container_name: 02_proj-frontend
+    # npm-пакет serve (установленный в контейнер докер-файлом) берет статические 
+    # ресурсы из папки build и отдает браузеру через локальный порт 3000 
+    command: serve -s build -l 3000
+    restart: unless-stopped
+    # После добавления nginx нам не нужно указывать порты 3000. До nginx 
+    # этот костыль позволял доставать до контейнера из браузера по адресу 
+    # localhost:3000. Теперь же мы можем набрать в браузере 02-proj.com
+    
+    # ports:
+    #   - "3000:3000"
+      
   api:
     build: ./api
     container_name: 02_proj-api
@@ -9,9 +23,9 @@ services:
     restart: unless-stopped
     # Слева - порт хоста (наша локальная машина). Справа - порт контейнера.
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
-      - PORT=3000
+      - PORT=3001
       - HOST=http://02-proj.com
       - MONGO_URL=mongodb://api_db:27017/api
     # Свойство depends_on означает, что сначала мы хотим запустить БД api_db, 
@@ -25,9 +39,9 @@ services:
       restart: unless-stopped
       # Слева - порт хоста (наша локальная машина). Справа - порт контейнера.
       ports:
-        - "3001:3001"
+        - "3002:3002"
       environment:
-        - PORT=3001 # Порт контейнера (значение справа от :)
+        - PORT=3002 # Порт контейнера (значение справа от :)
         - HOST=http://02-proj.com
         - MONGO_URL=mongodb://auth_db:27017/auth
       depends_on:
@@ -46,6 +60,22 @@ services:
     volumes:
       # Симлинк mongodb_auth, ссылающийся на путь в контейнере
       - mongodb_auth:/data/db
+
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: 02_proj-nginx
+    ports:
+      - "80:80"
+    volumes:
+    # Файл для продакшена (слева) будет помещен в контейнер по пути справа
+      - ./nginx/nginx.conf.prod:/etc/nginx/conf.d/nginx.conf
+    # Указываем зависимость, чтобы сервис nginx поднимался ПОСЛЕ 
+    # поднятия сервиса frontend. Иначе nginx упадет, потому что он 
+    # не сможет спроксировать запрос на сервис, который ранится 
+    # (находится в стадии запуска)
+    depends_on:
+      - frontend
 
 # Эти вольюмы мы можем шарить между нашими сервисами (контейнерами)
 volumes:
