@@ -3,7 +3,10 @@ version: '3'
 # Вариант сборки для продакшена
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+
     container_name: 02_proj-frontend
     # npm-пакет serve (установленный в контейнер докер-файлом) берет статические 
     # ресурсы из папки build и отдает браузеру через локальный порт 3000 
@@ -12,40 +15,52 @@ services:
     # После добавления nginx нам не нужно указывать порты 3000. До nginx 
     # этот костыль позволял доставать до контейнера из браузера по адресу 
     # localhost:3000. Теперь же мы можем набрать в браузере 02-proj.com
-    
-    # ports:
-    #   - "3000:3000"
+
+    # Слева - порт хоста (наша локальная машина). Справа - порт контейнера.
+    ports:
+      - "3000:3000"
+    networks:
+      - 02_proj-network
       
   api:
     build: ./api
     container_name: 02_proj-api
     command: npm run start
     restart: unless-stopped
-    # Слева - порт хоста (наша локальная машина). Справа - порт контейнера.
-    ports:
-      - "3001:3001"
+    
     environment:
       - PORT=3001
+      # Переменная HOST может понадобиться в некоторых юзкейсах, когда 
+      # сервису понадобиться редиректить запрос на главную страницу сайта. 
+      # В нашем проекте этого нет, поэтому можно было бы и убрать переменную, 
+      # но мы ее сохраняем для дебажных логов
       - HOST=http://02-proj.com
       - MONGO_URL=mongodb://api_db:27017/api
+      # Адреса для взаимодействие между сервисами (контейнерами) внутри 
+      # докерной сети имеют следующий вид (для локалхоста адрес бесполезен)
+      - AUTH_API_URL=http://auth:3002/api
     # Свойство depends_on означает, что сначала мы хотим запустить БД api_db, 
     # и только после этого стартануть сервис-контейнер api 
     depends_on:
       - api_db
+    networks:
+      - 02_proj-network
+
   auth:
       build: ./auth
       container_name: 02_proj-auth
       command: npm run start
       restart: unless-stopped
-      # Слева - порт хоста (наша локальная машина). Справа - порт контейнера.
-      ports:
-        - "3002:3002"
+      
       environment:
         - PORT=3002 # Порт контейнера (значение справа от :)
-        - HOST=http://02-proj.com
+        # - HOST=http://02-proj.com
         - MONGO_URL=mongodb://auth_db:27017/auth
+        - API_URL=http://api:3001/api
       depends_on:
         - auth_db
+      networks:
+        - 02_proj-network
 
   api_db:
     image: mongo:latest
@@ -53,6 +68,8 @@ services:
     volumes:
       # Симлинк mongodb_api, ссылающийся на путь в контейнере
       - mongodb_api:/data/db
+    networks:
+      - 02_proj-network
 
   auth_db:
     image: mongo:latest
@@ -60,7 +77,8 @@ services:
     volumes:
       # Симлинк mongodb_auth, ссылающийся на путь в контейнере
       - mongodb_auth:/data/db
-
+    networks:
+      - 02_proj-network
 
   nginx:
     image: nginx:stable-alpine
@@ -68,14 +86,19 @@ services:
     ports:
       - "80:80"
     volumes:
-    # Файл для продакшена (слева) будет помещен в контейнер по пути справа
+    # Конфиг для продакшена (слева) будет помещен в контейнер по пути справа
       - ./nginx/nginx.conf.prod:/etc/nginx/conf.d/nginx.conf
-    # Указываем зависимость, чтобы сервис nginx поднимался ПОСЛЕ 
-    # поднятия сервиса frontend. Иначе nginx упадет, потому что он 
-    # не сможет спроксировать запрос на сервис, который ранится 
+    # Указываем зависимости, чтобы сервис nginx поднимался ПОСЛЕ 
+    # поднятия сервисов frontend и т.д. Иначе nginx упадет, потому что 
+    # он не сможет спроксировать запрос на сервис, который ранится 
     # (находится в стадии запуска)
     depends_on:
       - frontend
+      - api
+      - auth
+    networks:
+      - 02_proj-network
+
 
 # Эти вольюмы мы можем шарить между нашими сервисами (контейнерами)
 volumes:
@@ -83,3 +106,6 @@ volumes:
   mongodb_auth:
 
 
+networks:
+  02_proj-network:
+    driver: bridge

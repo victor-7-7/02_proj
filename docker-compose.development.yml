@@ -3,6 +3,10 @@ version: '3'
 # Вариант сборки для разработки
 services:
   frontend: 
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+
     command: npm run start
     # Есть баг - интерактивная консоль реакта, запущенного в докер-контейнере, 
     # не работает из коробки. Чтобы пофиксить это, добавим следующие 2 настройки
@@ -17,10 +21,18 @@ services:
   api:
     command: npm run dev
     volumes:
-      # Создаем инлайн-симлинк (без имени) для папки проекта ./api/src 
-      # на машине разработчика, ссылающийся на путь в контейнере /usr/src/app/src
       - ./api/src:/usr/src/app/src
 
+  auth:
+    command: npm run dev
+    volumes:
+      - ./auth/src:/usr/src/app/src
+
+  nginx:    
+    volumes:
+    # Конфиг для разработки (слева) будет помещен в контейнер по пути справа
+      - ./nginx/nginx.conf.dev:/etc/nginx/conf.d/nginx.conf
+  
 
 
 # Команда на старт компоуза (подъем контейнеров) с предварительным билдом 

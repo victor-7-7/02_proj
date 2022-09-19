@@ -1,13 +1,19 @@
 server {
     listen 80;
 
-    server_name 02-proj.com;
+    server_name 02-proj.local;
 
     # Все запросы от клиентов (неважно что будет идти после /) 
     # на наш сервер (порт 80) мы хотим проксировать на frontend-хост, 
     # который существует только в сети докер-компоуза
     location / {
         proxy_pass http://frontend:3000;
+
+        # Добавляем функционал веб-сокетов
+        # Needed for web sockets only for dev
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 
     location /api {

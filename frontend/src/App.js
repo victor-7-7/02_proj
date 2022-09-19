@@ -1,7 +1,21 @@
 import logo from './logo.svg';
 import './App.css';
+import axios from 'axios';
 
 function App() {
+
+  // fetch('http://02-proj.com/api/posts').then(responce => {
+  //   this.setState({
+  //     posts
+  //   });
+  // });
+
+  const makeApiRequest = () => {
+    axios("/api/user").then(responce => {
+        console.log("responce", responce);
+    });
+  };
+
   return (
     <div className="App">
       <header className="App-header">
@@ -18,6 +32,8 @@ function App() {
           Learn React
         </a>
       </header>
+
+      <button onClick={ makeApiRequest }>Make api request</button>
     </div>
   );
 }
